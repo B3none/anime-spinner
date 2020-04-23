@@ -40,7 +40,29 @@ try {
     });
 
     SimpleRouter::get('/random', function () {
+        $anime = [];
+        $currentPage = 1;
 
+        $selectorToXpath = new Symfony\Component\CssSelector\CssSelectorConverter();
+        $xpathQuery = $selectorToXpath->toXPath('ul.listing > li');
+
+        while (true) {
+            $xpath = getXpath("/anime-list.html?page=$currentPage");
+            $response = $xpath->query($xpathQuery);
+
+            if ($response->count()) {
+                for ($i = 0; $i < $response->count(); $i++) {
+                    $anime[] = $response->item($i)->attributes->getNamedItem('title')->nodeValue;
+                }
+
+                $currentPage++;
+            } else {
+                break;
+            }
+        }
+
+        $anime = array_unique($anime);
+        echo $anime[array_rand($anime)];
     });
 
     SimpleRouter::start();
