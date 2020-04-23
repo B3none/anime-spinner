@@ -40,25 +40,49 @@ try {
     });
 
     SimpleRouter::get('/random', function () {
-        $anime = [];
-        $currentPage = 1;
+        $animeCacheContents = null;
+        $animeCache = __DIR__ . '/../app/cache/anime.json';
+        $animeCacheTime = 86400;
+        $updateCache = true;
 
-        $selectorToXpath = new Symfony\Component\CssSelector\CssSelectorConverter();
-        $xpathQuery = $selectorToXpath->toXPath('ul.listing > li');
+        if (file_exists($animeCache)) {
+            $animeCacheContents = file_get_contents($animeCache);
+            $animeCacheContents = json_decode($animeCacheContents, true);
 
-        while (true) {
-            $xpath = getXpath("/anime-list.html?page=$currentPage");
-            $response = $xpath->query($xpathQuery);
+            ['time' => $time, 'anime' => $anime] = $animeCacheContents;
 
-            if ($response->count()) {
-                for ($i = 0; $i < $response->count(); $i++) {
-                    $anime[] = $response->item($i)->attributes->getNamedItem('title')->nodeValue;
-                }
-
-                $currentPage++;
-            } else {
-                break;
+            if ($time < time() + $animeCacheTime) {
+                $updateCache = false;
             }
+        }
+
+        if ($updateCache) {
+            $anime = [];
+            $currentPage = 1;
+
+            $selectorToXpath = new Symfony\Component\CssSelector\CssSelectorConverter();
+            $xpathQuery = $selectorToXpath->toXPath('ul.listing > li');
+
+            while (true) {
+                $xpath = getXpath("/anime-list.html?page=$currentPage");
+                $response = $xpath->query($xpathQuery);
+
+                if ($response->count()) {
+                    for ($i = 0; $i < $response->count(); $i++) {
+                        $anime[] = $response->item($i)->attributes->getNamedItem('title')->nodeValue;
+                    }
+
+                    $currentPage++;
+                } else {
+                    break;
+                }
+            }
+
+            $animeCacheData = json_encode([
+                'time' => time() + $animeCacheTime,
+                'anime' => $anime,
+            ]);
+            file_put_contents($animeCache, $animeCacheData);
         }
 
         $anime = array_unique($anime);
