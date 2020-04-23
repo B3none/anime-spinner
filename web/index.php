@@ -8,13 +8,18 @@ require(__DIR__ . '/../vendor/autoload.php');
 require(__DIR__ . '/../vendor/pecee/simple-router/helpers.php');
 
 function getXpath($endpoint = ''): DOMXPath {
-    $BASE_URL = 'https://www18.gogoanime.io';
-    $contents = file_get_contents("$BASE_URL$endpoint");
+    $contents = file_get_contents(getLink($endpoint));
 
     $domdocument = new DOMDocument();
     @$domdocument->loadHTML($contents);
 
     return new DOMXPath($domdocument);
+}
+
+function getLink($endpoint = '') {
+    $BASE_URL = 'https://www18.gogoanime.io';
+
+    return "$BASE_URL$endpoint";
 }
 
 try {
@@ -69,7 +74,11 @@ try {
 
                 if ($response->count()) {
                     for ($i = 0; $i < $response->count(); $i++) {
-                        $anime[] = $response->item($i)->attributes->getNamedItem('title')->nodeValue;
+                        $html = $response->item($i)->attributes->getNamedItem('title')->nodeValue;
+                        $href = $response->item($i)->childNodes->item(1)->attributes->getNamedItem('href')->nodeValue;
+                        $href = getLink($href);
+
+                        $anime[] = str_replace('<a class="bigChar" href="">', '<a class="bigChar" href="'.$href.'">', $html);
                     }
 
                     $currentPage++;
