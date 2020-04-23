@@ -22,6 +22,59 @@ function getLink($endpoint = '') {
     return "$BASE_URL$endpoint";
 }
 
+function getCachedAnime() {
+    $animeCacheContents = null;
+    $animeCache = __DIR__ . '/../app/cache/anime.json';
+    $animeCacheTime = 86400;
+    $updateCache = true;
+
+    if (file_exists($animeCache)) {
+        $animeCacheContents = file_get_contents($animeCache);
+        $animeCacheContents = json_decode($animeCacheContents, true);
+
+        ['time' => $time, 'anime' => $anime] = $animeCacheContents;
+
+        if ($time < time() + $animeCacheTime) {
+            $updateCache = false;
+        }
+    }
+
+    if ($updateCache) {
+        $anime = [];
+        $currentPage = 1;
+
+        $selectorToXpath = new Symfony\Component\CssSelector\CssSelectorConverter();
+        $xpathQuery = $selectorToXpath->toXPath('ul.listing > li');
+
+        while (true) {
+            $xpath = getXpath("/anime-list.html?page=$currentPage");
+            $response = $xpath->query($xpathQuery);
+
+            if ($response->count()) {
+                for ($i = 0; $i < $response->count(); $i++) {
+                    $html = $response->item($i)->attributes->getNamedItem('title')->nodeValue;
+                    $href = $response->item($i)->childNodes->item(1)->attributes->getNamedItem('href')->nodeValue;
+                    $href = getLink($href);
+
+                    $anime[] = str_replace('<a class="bigChar" href="">', '<a class="bigChar" href="'.$href.'" target="_blank">', $html);
+                }
+
+                $currentPage++;
+            } else {
+                break;
+            }
+        }
+
+        $animeCacheData = json_encode([
+            'time' => time() + $animeCacheTime,
+            'anime' => $anime,
+        ]);
+        file_put_contents($animeCache, $animeCacheData);
+    }
+
+    return $anime;
+}
+
 try {
     SimpleRouter::get('/', function () {
         response()->redirect('/random');
@@ -44,58 +97,15 @@ try {
         }
     });
 
+    SimpleRouter::get('/get/{animeId}', function (string $animeId) {
+        $anime = getCachedAnime();
+
+        echo '<a href="/random">Get Random</a><br><br>' . $anime[$animeId];
+    });
+
     SimpleRouter::get('/random', function () {
-        $animeCacheContents = null;
-        $animeCache = __DIR__ . '/../app/cache/anime.json';
-        $animeCacheTime = 86400;
-        $updateCache = true;
-
-        if (file_exists($animeCache)) {
-            $animeCacheContents = file_get_contents($animeCache);
-            $animeCacheContents = json_decode($animeCacheContents, true);
-
-            ['time' => $time, 'anime' => $anime] = $animeCacheContents;
-
-            if ($time < time() + $animeCacheTime) {
-                $updateCache = false;
-            }
-        }
-
-        if ($updateCache) {
-            $anime = [];
-            $currentPage = 1;
-
-            $selectorToXpath = new Symfony\Component\CssSelector\CssSelectorConverter();
-            $xpathQuery = $selectorToXpath->toXPath('ul.listing > li');
-
-            while (true) {
-                $xpath = getXpath("/anime-list.html?page=$currentPage");
-                $response = $xpath->query($xpathQuery);
-
-                if ($response->count()) {
-                    for ($i = 0; $i < $response->count(); $i++) {
-                        $html = $response->item($i)->attributes->getNamedItem('title')->nodeValue;
-                        $href = $response->item($i)->childNodes->item(1)->attributes->getNamedItem('href')->nodeValue;
-                        $href = getLink($href);
-
-                        $anime[] = str_replace('<a class="bigChar" href="">', '<a class="bigChar" href="'.$href.'">', $html);
-                    }
-
-                    $currentPage++;
-                } else {
-                    break;
-                }
-            }
-
-            $animeCacheData = json_encode([
-                'time' => time() + $animeCacheTime,
-                'anime' => $anime,
-            ]);
-            file_put_contents($animeCache, $animeCacheData);
-        }
-
-        $anime = array_unique($anime);
-        echo $anime[array_rand($anime)];
+        $anime = getCachedAnime();
+        response()->redirect('/get/' . array_rand($anime));
     });
 
     SimpleRouter::start();
