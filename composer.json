@@ -13,5 +13,8 @@
             "B3none\\AnimeSpinner\\": "src/"
         }
     },
-    "require": {}
+    "require": {
+        "symfony/css-selector": "^5.0",
+        "pecee/simple-router": "4.2.0.6"
+    }
 }
