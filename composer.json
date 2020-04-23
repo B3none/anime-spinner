@@ -1,0 +1,17 @@
+{
+    "name": "b3none/anime-spinner",
+    "description": "Suggest a random anime to watch in a horrifically inefficient way!",
+    "type": "project",
+    "authors": [
+        {
+            "name": "B3none",
+            "email": "ablackham2000@gmail.com"
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "B3none\\AnimeSpinner\\": "src/"
+        }
+    },
+    "require": {}
+}
